@@ -13,4 +13,6 @@ fi
 
 echo "Calling validator..."
 
+echo $1;
+
 curl -X POST -F archive=@$1 -F key=$2  https://validator.prestashop.com/api/modules
