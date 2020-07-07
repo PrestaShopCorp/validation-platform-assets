@@ -1,18 +1,7 @@
 #!/bin/bash
 set -e
 
-if [ ! -z "$1" ]
-then
-  echo "missing module zip."
-fi
-
-if [ ! -z "$2" ]
-then
-  echo "missing api key."
-fi
-
 echo "Calling validator..."
-
-echo $1;
-
-curl -X POST -F archive=@$1 -F key=$2  https://validator.prestashop.com/api/modules
+zipPath="@{$1};type=application/zip"
+echo $zipPath
+curl -X POST -F archive=@$zipPath -F key=$2  https://validator.prestashop.com/api/modules
