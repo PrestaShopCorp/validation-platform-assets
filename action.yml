@@ -8,9 +8,12 @@ inputs:
   module_zip:
     description: 'Add your module zip'
     required: true
+  api_key:
+    description: 'Add the api key'
+    required: true
 runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
     - ${{ inputs.module_zip }}
-    - ${{ secrets.VALIDATOR_API_KEY }}
+    - ${{ inputs.api_key }}
