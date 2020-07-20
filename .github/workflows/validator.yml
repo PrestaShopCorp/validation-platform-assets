@@ -1,5 +1,5 @@
 name: Validator tests
-on: [pull_request]
+on: pull_request
 jobs:
   validator-tests:
     name: send test to validator
@@ -9,9 +9,15 @@ jobs:
           id: vars
           run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
         - name: send module to validator
-          uses: PrestaShopCorp/github-action-validator@dev
+          uses: PrestaShopCorp/github-action-validator@add-sf-and-continue-logic
           env:
             VALIDATOR_API_KEY: ${{ secrets.VALIDATOR_API_KEY }}
           with:
             github_link: PrestaShopSellerExtensions/${{ github.event.repository.name }}
-            github_branch: ${{ steps.vars.outputs.short_ref }}
+            github_branch: ${{github.head_ref}}
+        - name: comment PR
+          uses: machine-learning-apps/pr-comment@master
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            path: ./result_validator.txt
