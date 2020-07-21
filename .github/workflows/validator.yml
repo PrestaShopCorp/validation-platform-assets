@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
         - name: send module to validator
-          uses: PrestaShopCorp/github-action-validator@add-sf-and-continue-logic
+          uses: PrestaShopCorp/github-action-validator@v1.0
           env:
             VALIDATOR_API_KEY: ${{ secrets.VALIDATOR_API_KEY }}
           with:
