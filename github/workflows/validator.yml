@@ -10,7 +10,8 @@ jobs:
           env:
             VALIDATOR_API_KEY: ${{ secrets.VALIDATOR_API_KEY }}
           with:
-            github_link: PrestaShopSellerExtensions/${{ github.event.repository.name }}
+            # Example of github_link: PrestaShopCorp/ps_checkout
+            github_link: ${{ github.event.repository.full_name }}
             github_branch: ${{github.head_ref}}
         - name: comment PR
           uses: machine-learning-apps/pr-comment@master
