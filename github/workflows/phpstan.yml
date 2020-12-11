@@ -1,0 +1,62 @@
+name: PHPStan
+on: [pull_request]
+jobs:
+  compliancy:
+    name: Version compliancy detection
+    runs-on: ubuntu-latest
+    outputs:
+      minver: ${{ steps.versionCompliancy.outputs.minver }}
+      maxver: ${{ steps.versionCompliancy.outputs.maxver }}
+    steps:
+      - name: Get minimum and maximum PrestaShop compatible version from PR description
+        id: versionCompliancy
+        run: |
+          regex="\| Prestashop Compatibility \| ([0-9\.]+) -> ([0-9\.]+) \|"
+          prBody=$(jq '.pull_request.body' $GITHUB_EVENT_PATH)
+          if [[ $prBody =~ $regex ]]; then 
+            echo ::set-output name=minver::${BASH_REMATCH[1]}
+            echo ::set-output name=maxver::${BASH_REMATCH[2]}
+          fi
+
+      - name: Output result
+        run: echo "${{steps.versionCompliancy.outputs.minver}} -> ${{steps.versionCompliancy.outputs.maxver}}"
+
+  phpstan:
+    name: Run PHPStan
+    needs: compliancy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        presta-versions: ['1.6.0.3', '1.6.1.0', '1.7.2.4', '1.7.3.3', '1.7.4.2', '1.7.5.1', '1.7.6.5'] #, 'latest']
+    steps:
+      # Check the PrestaShop we want to run is included in the compatibility range
+      - name: Define a boolean variable saying if the test can run
+        id: verify
+        run: |
+          verlte() {
+              [  "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
+          }
+          verlt() {
+              [ "$1" = "$2" ] && return 1 || verlte $1 $2
+          }
+          echo ::set-output name=PHPStanCanRun::$((verlt ${{needs.compliancy.outputs.minver}} ${{ matrix.presta-versions }} && verlt ${{ matrix.presta-versions }} ${{needs.compliancy.outputs.maxver}}) && echo '1' || echo '0')
+
+      - run: echo "Value of PHPStanCanRun is ${{ steps.verify.outputs.PHPStanCanRun }}"
+
+      - name: Checkout
+        uses: actions/checkout@v2.0.0
+        if: ${{ steps.verify.outputs.PHPStanCanRun == 1 }}
+
+      - name: Install validation tools with composer
+        run: |
+          cd .validation
+          composer install
+        if: ${{ steps.verify.outputs.PHPStanCanRun == 1 }}
+
+      - name: Pull PrestaShop files (Tag ${{ matrix.presta-versions }})
+        run: docker run -tid --rm -v ps-volume:/var/www/html --name temp-ps prestashop/prestashop:${{ matrix.presta-versions }}
+        if: ${{ steps.verify.outputs.PHPStanCanRun == 1 }}
+
+      - name : Run PHPStan
+        run: docker run --rm --volumes-from temp-ps -v $PWD:/web/module -e _PS_ROOT_DIR_=/var/www/html --workdir=/web/module/.validation phpstan/phpstan:0.12 analyse --configuration=/web/module/.validation/phpstan/phpstan.neon --error-format github
+        if: ${{ steps.verify.outputs.PHPStanCanRun == 1 }}
