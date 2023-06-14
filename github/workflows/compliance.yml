@@ -18,9 +18,9 @@ jobs:
             --header 'Content-Type: application/x-www-form-urlencoded' \
             --data-urlencode 'client_id=${{ secrets.OAUTH_CLIENT_ID }}' \
             --data-urlencode 'client_secret=${{ secrets.OAUTH_CLIENT_SECRET }}' \
-            --data-urlencode 'grant_type=client_credentials' \
+            --data-urlencode 'grant_type=${{ secrets.OAUTH_GRANT_TYPE }}' \
             --data-urlencode 'audience=${{ secrets.OAUTH_AUDIENCE }}' \
-            --data-urlencode 'scope=openid prestashop_modules.write' \
+            --data-urlencode 'scope=${{ secrets.OAUTH_SCOPE }}' \
             --output token.json
             echo TOKEN=$(cat token.json | jq -c .access_token) >> $GITHUB_OUTPUT 
       - name: "Send zip to orchestrator"
@@ -28,7 +28,7 @@ jobs:
         run: |
           echo ${{ steps.get_oauth_token.outputs.TOKEN }}
           echo "send zipped module to compliance orchestrator"
-          curl --location --request POST https://api.compliance-preproduction.prestashop.com/orchestrator/v1/scan \
+          curl --location --request POST ${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/scan \
             --header "Accept: application/zip" \
             --header "Content-Type: multipart/form-data" \
             --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
