@@ -1,0 +1,41 @@
+name: 'Auth Compliance API'
+description: 'Auth Compliance API'
+inputs:
+  token-uri:
+    required: true
+    type: string
+  cookie:
+    required: true
+    type: string
+  client-id:
+    required: true
+    type: string
+  client-secret:
+    required: true
+    type: string
+  grant-type:
+    required: true
+    type: string
+  audience:
+    required: true
+    type: string
+  scope:
+    required: true
+    type: string
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get OAUTH token from oauth.prestashop.com
+      shell: bash
+      run: |
+        curl --location --request POST "${{ inputs.token-uri }}" \
+          --cookie "${{ inputs.cookie }}" \
+          --header "Content-Type: application/x-www-form-urlencoded" \
+          --data-urlencode 'client_id=${{ inputs.client-id }}' \
+          --data-urlencode 'client_secret=${{ inputs.client-secret }}' \
+          --data-urlencode 'grant_type=${{ inputs.grant-type }}' \
+          --data-urlencode 'audience=${{ inputs.audience }}' \
+          --data-urlencode 'scope=${{ inputs.scope }}' \
+          --output token.json
+        echo TOKEN=$(cat token.json | jq -c .access_token) >> $GITHUB_OUTPUT

@@ -20,19 +20,16 @@ jobs:
                 cd ..
                 zip -r -q module.zip ${{ steps.get_repo_name.outputs.REPO_NAME }} -x module.zip
             - name: Get OAUTH token from oauth.prestashop.com
+              uses: ./../../actions/auth-compliance
               id: get_oauth_token
-              run: |
-                curl --location --request POST "${{ secrets.OAUTH_TOKEN_URI }}" \
-                    --cookie "${{ secrets.OAUTH_COOKIE }}" \
-                    --header "Content-Type: application/x-www-form-urlencoded" \
-                    --data-urlencode 'client_id=${{ secrets.OAUTH_CLIENT_ID }}' \
-                    --data-urlencode 'client_secret=${{ secrets.OAUTH_CLIENT_SECRET }}' \
-                    --data-urlencode 'grant_type=${{ secrets.OAUTH_GRANT_TYPE }}' \
-                    --data-urlencode 'audience=${{ secrets.OAUTH_AUDIENCE }}' \
-                    --data-urlencode 'scope=${{ secrets.OAUTH_SCOPE }}' \
-                    --output token.json
-                    echo $(cat token.json)
-                    echo TOKEN=$(cat token.json | jq -c .access_token) >> $GITHUB_OUTPUT
+              with:
+                token-uri: ${{ secrets.OAUTH_TOKEN_URI }}
+                cookie: ${{ secrets.OAUTH_COOKIE }}
+                client-id: ${{ secrets.OAUTH_CLIENT_ID }}
+                client-secret: ${{ secrets.OAUTH_CLIENT_SECRET }}
+                grant-type: ${{ secrets.OAUTH_GRANT_TYPE }}
+                audience: ${{ secrets.OAUTH_AUDIENCE }}
+                scope: ${{ secrets.OAUTH_SCOPE }}
             - name: "Send zip to orchestrator"
               id: send_zip
               run: |
