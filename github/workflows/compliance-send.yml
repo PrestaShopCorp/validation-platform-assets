@@ -1,46 +1,54 @@
-name: ComplianceChecks
+name: ComplianceSendModule
 on: [pull_request]
 
 jobs:
-  send-to-compliance:
-      name: Send to Compliance
-      runs-on: ubuntu-latest
-      steps:
-          - uses: actions/checkout@v3
-          - name: Zip Folder
-            run: |
-              cd ..
-              zip -r -q module.zip $(echo ${{ github.workspace }} | cut -d / -f 5) -x module.zip
-          - name: Get OAUTH token from oauth.prestashop.com
-            id: get_oauth_token
-            run: |
-              curl --location --request POST "${{ secrets.OAUTH_TOKEN_URI }}" \
-                  --cookie "${{ secrets.OAUTH_COOKIE }}" \
-                  --header "Content-Type: application/x-www-form-urlencoded" \
-                  --data-urlencode 'client_id=${{ secrets.OAUTH_CLIENT_ID }}' \
-                  --data-urlencode 'client_secret=${{ secrets.OAUTH_CLIENT_SECRET }}' \
-                  --data-urlencode 'grant_type=${{ secrets.OAUTH_GRANT_TYPE }}' \
-                  --data-urlencode 'audience=${{ secrets.OAUTH_AUDIENCE }}' \
-                  --data-urlencode 'scope=${{ secrets.OAUTH_SCOPE }}' \
-                  --output token.json
-                  echo $(cat token.json)
-                  echo TOKEN=$(cat token.json | jq -c .access_token) >> $GITHUB_OUTPUT
-          - name: "Send zip to orchestrator"
-            id: send_zip
-            run: |
-              curl --location --request POST "${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/scan" \
-                  --header "Connection: keep-alive" \
-                  --header "Content-Type: multipart/form-data" \
-                  --form 'module=@./../module.zip' \
-                  --form 'callback[method]="POST"' \
-                  --form 'callback[payload][ref]=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}' \
-                  --form callback[headers][0][0]="Accept"' \
-                  --form 'callback[headers][0][1]="application/vnd.github+json"' \
-                  --form 'callback[headers][1][0]="X-GitHub-Api-Version"' \
-                  --form 'callback[headers][1][1]="2022-11-28"' \
-                  --form 'callback[headers][2][0]="Authorization"' \
-                  --form 'callback[headers][2][1]="Bearer ${{ secrets.GITHUB_TOKEN }}"' \
-                  --output scan.json
-              jq --color-output . scan.json | less -R
-
-
+    send-to-compliance:
+        name: Send to Compliance
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - name: Get repo name
+              id: get_repo_name
+              run: |
+                echo REPO_NAME=$(echo ${{ github.workspace }} | cut -d / -f 5) >> $GITHUB_OUTPUT
+            - name: Get branch name
+              id: get_branch_name
+              run: |
+                echo BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}} >> $GITHUB_OUTPUT
+            - name: Zip Folder
+              run: |
+                cd ..
+                zip -r -q module.zip ${{ steps.get_repo_name.outputs.REPO_NAME }} -x module.zip
+            - name: Get OAUTH token from oauth.prestashop.com
+              id: get_oauth_token
+              run: |
+                curl --location --request POST "${{ secrets.OAUTH_TOKEN_URI }}" \
+                    --cookie "${{ secrets.OAUTH_COOKIE }}" \
+                    --header "Content-Type: application/x-www-form-urlencoded" \
+                    --data-urlencode 'client_id=${{ secrets.OAUTH_CLIENT_ID }}' \
+                    --data-urlencode 'client_secret=${{ secrets.OAUTH_CLIENT_SECRET }}' \
+                    --data-urlencode 'grant_type=${{ secrets.OAUTH_GRANT_TYPE }}' \
+                    --data-urlencode 'audience=${{ secrets.OAUTH_AUDIENCE }}' \
+                    --data-urlencode 'scope=${{ secrets.OAUTH_SCOPE }}' \
+                    --output token.json
+                    echo $(cat token.json)
+                    echo TOKEN=$(cat token.json | jq -c .access_token) >> $GITHUB_OUTPUT
+            - name: "Send zip to orchestrator"
+              id: send_zip
+              run: |
+                curl --location --request POST "${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/scan" \
+                    --header "Connection: keep-alive" \
+                    --header "Content-Type: multipart/form-data" \
+                    --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
+                    --form 'module=@./../module.zip' \
+                    --form 'callback[method]="post"' \
+                    --form 'callback[uri]="https://api.github.com/repos/PrestaShopSellerExtensions/${{ steps.get_repo_name.outputs.REPO_NAME }}/actions/workflows/compliance-get-report.yml/dispatches"' \
+                    --form 'callback[payload][ref]=${{ steps.get_branch_name.outputs.BRANCH }}' \
+                    --form 'callback[headers][0][0]="Accept"' \
+                    --form 'callback[headers][0][1]="application/vnd.github+json"' \
+                    --form 'callback[headers][1][0]="X-GitHub-Api-Version"' \
+                    --form 'callback[headers][1][1]="2022-11-28"' \
+                    --form 'callback[headers][2][0]="Authorization"' \
+                    --form 'callback[headers][2][1]="Bearer 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"' \
+                    --output scan.json
+                jq --color-output . scan.json | less -R
