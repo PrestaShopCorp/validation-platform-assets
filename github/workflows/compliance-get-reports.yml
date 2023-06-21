@@ -39,8 +39,8 @@ jobs:
               jq --color-output . status.json | less -R && exit 0
 
             # Generate Matrix
-            services=( $(jq -r '.servicesStatus[].service' status.json) )
-            json=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${services[@]}")
+            services=( $(jq -r '.servicesStatus[].service' status.json) ) && exit 0
+            json=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${services[@]}") && exit 0
             echo services="{\"services\":$json}" >> $GITHUB_OUTPUT && exit 0
     outputs:
       services: ${{ steps.get_status.outputs.services }}  
