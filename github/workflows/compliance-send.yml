@@ -18,7 +18,8 @@ jobs:
             - name: Zip Folder
               run: |
                 cd ..
-                zip -r -q module.zip ${{ steps.get_repo_name.outputs.REPO_NAME }} -x module.zip
+                zip -r -q module.zip ${{ steps.get_repo_name.outputs.REPO_NAME }} -x module.zip 
+                exit 0
             - name: Get OAUTH token from oauth.prestashop.com
               uses: ./../../actions/auth-compliance
               id: get_oauth_token
@@ -46,6 +47,7 @@ jobs:
                     --form 'callback[headers][1][0]="X-GitHub-Api-Version"' \
                     --form 'callback[headers][1][1]="2022-11-28"' \
                     --form 'callback[headers][2][0]="Authorization"' \
-                    --form 'callback[headers][2][1]="Bearer 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"' \
-                    --output scan.json
+                    --form 'callback[headers][2][1]="Bearer ${{ secrets.PAT }}"' \
+                    --output scan.json 
                 jq --color-output . scan.json | less -R
+                exit 0

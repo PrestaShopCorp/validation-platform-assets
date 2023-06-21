@@ -42,6 +42,7 @@ jobs:
             services=( $(jq -r '.servicesStatus[].service' status.json) )
             json=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${services[@]}")
             echo services="{\"services\":$json}" >> $GITHUB_OUTPUT
+            exit 0
     outputs:
       services: ${{ steps.get_status.outputs.services }}  
 
@@ -76,3 +77,4 @@ jobs:
             --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
             --output report.json
           jq --color-output . report.json | less -R
+          exit 0

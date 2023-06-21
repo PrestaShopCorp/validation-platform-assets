@@ -39,3 +39,4 @@ runs:
           --data-urlencode 'scope=${{ inputs.scope }}' \
           --output token.json
         echo TOKEN=$(cat token.json | jq -c .access_token) >> $GITHUB_OUTPUT
+        exit 0
