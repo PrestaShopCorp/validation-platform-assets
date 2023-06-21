@@ -20,7 +20,7 @@ jobs:
                 cd ..
                 zip -r -q module.zip ${{ steps.get_repo_name.outputs.REPO_NAME }} -x module.zip && exit 0
             - name: Get OAUTH token from oauth.prestashop.com
-              uses: ./../../actions/auth-compliance
+              uses: ./actions/auth-compliance
               id: get_oauth_token
               with:
                 token-uri: ${{ secrets.OAUTH_TOKEN_URI }}

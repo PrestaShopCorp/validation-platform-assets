@@ -16,8 +16,9 @@ jobs:
     name: get status
     runs-on: ubuntu-latest
     steps:
+        - uses: actions/checkout@v3
         - name: Get OAUTH token from oauth.prestashop.com
-          uses: ./../../actions/auth-compliance
+          uses: ./actions/auth-compliance
           id: get_oauth_token
           with:
             token-uri: ${{ secrets.OAUTH_TOKEN_URI }}
