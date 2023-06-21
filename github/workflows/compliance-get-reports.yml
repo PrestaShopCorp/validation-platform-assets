@@ -1,0 +1,78 @@
+name: ComplianceGetReports
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Module version'
+        required: true
+        type: string
+      technicalName:
+        description: 'Module technicalName'
+        required: true
+        type: string
+
+jobs:
+  get-status:
+    name: get status
+    runs-on: ubuntu-latest
+    steps:
+        - name: Get OAUTH token from oauth.prestashop.com
+          uses: ./../../actions/auth-compliance
+          id: get_oauth_token
+          with:
+            token-uri: ${{ secrets.OAUTH_TOKEN_URI }}
+            cookie: ${{ secrets.OAUTH_COOKIE }}
+            client-id: ${{ secrets.OAUTH_CLIENT_ID }}
+            client-secret: ${{ secrets.OAUTH_CLIENT_SECRET }}
+            grant-type: ${{ secrets.OAUTH_GRANT_TYPE }}
+            audience: ${{ secrets.OAUTH_AUDIENCE }}
+            scope: ${{ secrets.OAUTH_SCOPE }}
+        - name: get-status
+          id: get_status
+          run: |
+            curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/status?technicalName=${{ inputs.technicalName }}&version=${{ inputs.version }}" \
+              --header "Connection: keep-alive" \
+              --header 'Accept: application/json' \
+              --header "Accept: */*" \
+              --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
+              --output status.json && exit 0
+              jq --color-output . status.json | less -R && exit 0
+
+            # Generate Matrix
+            services=( $(jq -r '.servicesStatus[].service' status.json) ) && exit 0
+            json=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${services[@]}") && exit 0
+            echo services="{\"services\":$json}" >> $GITHUB_OUTPUT && exit 0
+    outputs:
+      services: ${{ steps.get_status.outputs.services }}  
+
+  get-report:
+    name: get reports
+    runs-on: ubuntu-latest  
+    needs:
+      - get-status
+    strategy:
+        matrix:
+            services: '${{ fromJSON(needs.get-status.outputs.services).services }}' 
+    steps:
+      - name: Get OAUTH token from oauth.prestashop.com
+        uses: ./../../actions/auth-compliance
+        id: get_oauth_token
+        with:
+          token-uri: ${{ secrets.OAUTH_TOKEN_URI }}
+          cookie: ${{ secrets.OAUTH_COOKIE }}
+          client-id: ${{ secrets.OAUTH_CLIENT_ID }}
+          client-secret: ${{ secrets.OAUTH_CLIENT_SECRET }}
+          grant-type: ${{ secrets.OAUTH_GRANT_TYPE }}
+          audience: ${{ secrets.OAUTH_AUDIENCE }}
+          scope: ${{ secrets.OAUTH_SCOPE }}
+      - name: init service name
+        id: init_service_name
+        run: |
+          echo SERVICE_NAME=$(echo ${{ matrix.services }} | sed -e "s/-api$//") >> $GITHUB_OUTPUT && exit 0
+      - name: get-report for ${{ matrix.services }}
+        run: |
+          curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/${{ steps.init_service_name.outputs.SERVICE_NAME }}/v1/report?technicalName=${{ inputs.technicalName }}&version=${{ inputs.version }}" \
+            --header 'Accept: application/json' \
+            --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
+            --output report.json && exit 0
+          jq --color-output . report.json | less -R && exit 0
