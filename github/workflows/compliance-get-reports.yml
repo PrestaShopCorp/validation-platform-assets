@@ -35,14 +35,13 @@ jobs:
               --header 'Accept: application/json' \
               --header "Accept: */*" \
               --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
-              --output status.json
-              jq --color-output . status.json | less -R
+              --output status.json && exit 0
+              jq --color-output . status.json | less -R && exit 0
 
             # Generate Matrix
             services=( $(jq -r '.servicesStatus[].service' status.json) )
             json=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${services[@]}")
-            echo services="{\"services\":$json}" >> $GITHUB_OUTPUT
-            exit 0
+            echo services="{\"services\":$json}" >> $GITHUB_OUTPUT && exit 0
     outputs:
       services: ${{ steps.get_status.outputs.services }}  
 
@@ -69,12 +68,11 @@ jobs:
       - name: init service name
         id: init_service_name
         run: |
-          echo SERVICE_NAME=$(echo ${{ matrix.services }} | sed -e "s/-api$//") >> $GITHUB_OUTPUT
+          echo SERVICE_NAME=$(echo ${{ matrix.services }} | sed -e "s/-api$//") >> $GITHUB_OUTPUT && exit 0
       - name: get-report for ${{ matrix.services }}
         run: |
           curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/${{ steps.init_service_name.outputs.SERVICE_NAME }}/v1/report?technicalName=${{ inputs.technicalName }}&version=${{ inputs.version }}" \
             --header 'Accept: application/json' \
             --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
-            --output report.json
-          jq --color-output . report.json | less -R
-          exit 0
+            --output report.json && exit 0
+          jq --color-output . report.json | less -R && exit 0
