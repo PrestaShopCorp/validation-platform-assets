@@ -22,11 +22,15 @@ inputs:
   scope:
     required: true
     type: string
-
+outputs:
+    token: 
+      description: "OAuth Token"
+      value: ${{ steps.get_oauth_token_value.outputs.token }}
 runs:
   using: 'composite'
   steps:
     - name: Get OAUTH token from oauth.prestashop.com
+      id: get_oauth_token_value
       shell: bash
       run: |
         curl --location --request POST "${{ inputs.token-uri }}" \
@@ -38,4 +42,6 @@ runs:
           --data-urlencode 'audience=${{ inputs.audience }}' \
           --data-urlencode 'scope=${{ inputs.scope }}' \
           --output token.json
-        echo TOKEN=$(cat token.json | jq -c .access_token) >> "$GITHUB_OUTPUT"
+        cat token.json
+        token_value="$(cat token.json | jq -c .access_token)"
+        echo "token=$token_value" >> $GITHUB_OUTPUT

@@ -33,13 +33,14 @@ jobs:
             - name: "Send zip to orchestrator"
               id: send_zip
               run: |
+                echo  "OAuth Token [${{ steps.get_oauth_token.outputs.token }}]"
                 curl --location --request POST "${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/scan" \
                     --header "Connection: keep-alive" \
                     --header "Content-Type: multipart/form-data" \
-                    --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
+                    --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
                     --form 'module=@./../module.zip' \
                     --form 'callback[method]="post"' \
-                    --form 'callback[uri]="https://api.github.com/repos/PrestaShopSellerExtensions/${{ steps.get_repo_name.outputs.REPO_NAME }}/actions/workflows/compliance-get-report.yml/dispatches"' \
+                    --form 'callback[uri]="https://api.github.com/repos/PrestaShopSellerExtensions/${{ steps.get_repo_name.outputs.REPO_NAME }}/actions/workflows/compliance-get-reports.yml/dispatches"' \
                     --form 'callback[payload][ref]=${{ steps.get_branch_name.outputs.BRANCH }}' \
                     --form 'callback[headers][0][0]="Accept"' \
                     --form 'callback[headers][0][1]="application/vnd.github+json"' \

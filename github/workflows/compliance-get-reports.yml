@@ -35,7 +35,7 @@ jobs:
               --header "Connection: keep-alive" \
               --header 'Accept: application/json' \
               --header "Accept: */*" \
-              --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
+              --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
               --output status.json && exit 0
               jq --color-output . status.json | less -R && exit 0
 
@@ -56,7 +56,7 @@ jobs:
             services: '${{ fromJSON(needs.get-status.outputs.services).services }}' 
     steps:
       - name: Get OAUTH token from oauth.prestashop.com
-        uses: ./../../actions/auth-compliance
+        uses: ./actions/auth-compliance
         id: get_oauth_token
         with:
           token-uri: ${{ secrets.OAUTH_TOKEN_URI }}
@@ -74,6 +74,6 @@ jobs:
         run: |
           curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/${{ steps.init_service_name.outputs.SERVICE_NAME }}/v1/report?technicalName=${{ inputs.technicalName }}&version=${{ inputs.version }}" \
             --header 'Accept: application/json' \
-            --oauth2-bearer ${{ steps.get_oauth_token.outputs.TOKEN }} \
+            --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
             --output report.json && exit 0
           jq --color-output . report.json | less -R && exit 0
