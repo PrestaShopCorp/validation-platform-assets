@@ -2,24 +2,21 @@ name: ComplianceGetReports
 on:
   pull_request:
     types: [opened, reopened]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Module version'
-        required: true
-        type: string
-      technicalName:
-        description: 'Module technicalName'
-        required: true
-        type: string
+
+env:
+  TECHNICAL_NAME: ${{ github.event.pull_request.base.repo.name }}
 
 jobs:
   get-status:
     name: get status
     runs-on: ubuntu-latest
-    if: ${{ inputs.technicalName != '' }}
     steps:
         - uses: actions/checkout@v3
+        - uses: actions-ecosystem/action-regex-match@v2
+          id: get_version
+          with:
+            text: ${{ github.event.pull_request.title }}
+            regex: '\d+(\.\d+)+'
         - name: Get OAUTH token from oauth.prestashop.com
           uses: ./actions/auth-compliance
           id: get_oauth_token
@@ -33,8 +30,11 @@ jobs:
             scope: ${{ secrets.OAUTH_SCOPE }}
         - name: get-status
           id: get_status
+          if: ${{ steps.get_version.outputs.match != '' }}
           run: |
-            curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/status?technicalName=${{ inputs.technicalName }}&version=${{ inputs.version }}" \
+            echo $TECHNICAL_NAME
+            echo ${{ steps.get_version.outputs.match }}
+            curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/status?technicalName=${TECHNICAL_NAME}&version=${{ steps.get_version.outputs.match }}" \
               --header "Connection: keep-alive" \
               --header 'Accept: application/json' \
               --header "Accept: */*" \
@@ -56,9 +56,13 @@ jobs:
     strategy:
         matrix:
             services: '${{ fromJSON(needs.get-status.outputs.services).services }}' 
-    if: ${{ inputs.technicalName != '' }}
     steps:
       - uses: actions/checkout@v3
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: get_version
+        with:
+          text: ${{ github.event.pull_request.title }}
+          regex: '\d+(\.\d+)+'
       - name: Get OAUTH token from oauth.prestashop.com
         uses: ./actions/auth-compliance
         id: get_oauth_token
@@ -72,11 +76,13 @@ jobs:
           scope: ${{ secrets.OAUTH_SCOPE }}
       - name: init service name
         id: init_service_name
+        if: ${{ steps.get_version.outputs.match != '' }}
         run: |
           echo SERVICE_NAME=$(echo ${{ matrix.services }} | sed -e "s/-api$//") >> $GITHUB_OUTPUT
       - name: get-report for ${{ matrix.services }}
+        if: ${{ steps.get_version.outputs.match != '' }}
         run: |
-          curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/${{ steps.init_service_name.outputs.SERVICE_NAME }}/v1/report?technicalName=${{ inputs.technicalName }}&version=${{ inputs.version }}" \
+          curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/${{ steps.init_service_name.outputs.SERVICE_NAME }}/v1/report?technicalName=$TECHNICAL_NAME&version=${{ steps.get_version.outputs.match }}" \
             --header 'Accept: application/json' \
             --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
             --output report.json
