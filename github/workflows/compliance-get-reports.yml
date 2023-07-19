@@ -7,9 +7,26 @@ env:
   TECHNICAL_NAME: ${{ github.event.pull_request.base.repo.name }}
 
 jobs:
+  call-api-compliance:
+      name: Send module to API Compliance
+      uses: ./.github/workflows/compliance-send.yml
+      if: github.run_attempt == '1'
+      with:
+        workflow-report-id: ${{ github.run_id }}
+      secrets: 
+        OAUTH_TOKEN_URI: ${{ secrets.OAUTH_TOKEN_URI }}
+        OAUTH_COOKIE: ${{ secrets.OAUTH_COOKIE }}
+        OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
+        OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
+        OAUTH_GRANT_TYPE: ${{ secrets.OAUTH_GRANT_TYPE }}
+        OAUTH_AUDIENCE: ${{ secrets.OAUTH_AUDIENCE }}
+        OAUTH_SCOPE: ${{ secrets.OAUTH_SCOPE }}
+        COMPLIANCE_BASE_URI: ${{ secrets.COMPLIANCE_BASE_URI }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
   get-status:
     name: get status
     runs-on: ubuntu-latest
+    if: github.run_attempt != '1'
     steps:
         - uses: actions/checkout@v3
         - uses: actions-ecosystem/action-regex-match@v2
@@ -32,8 +49,6 @@ jobs:
           id: get_status
           if: ${{ steps.get_version.outputs.match != '' }}
           run: |
-            echo $TECHNICAL_NAME
-            echo ${{ steps.get_version.outputs.match }}
             curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/status?technicalName=${TECHNICAL_NAME}&version=${{ steps.get_version.outputs.match }}" \
               --header "Connection: keep-alive" \
               --header 'Accept: application/json' \
@@ -47,7 +62,6 @@ jobs:
             echo "services={\"services\":$json}" >> $GITHUB_OUTPUT
     outputs:
       services: ${{ steps.get_status.outputs.services }}  
-
   get-report:
     name: get reports
     runs-on: ubuntu-latest  
