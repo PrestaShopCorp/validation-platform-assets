@@ -1,6 +1,9 @@
 name: ComplianceSendModule
 on: [pull_request]
 
+env:
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
 jobs:
     send-to-compliance:
         name: Send to Compliance
@@ -10,15 +13,15 @@ jobs:
             - name: Get repo name
               id: get_repo_name
               run: |
-                echo REPO_NAME=$(echo ${{ github.workspace }} | cut -d / -f 5) >> $GITHUB_OUTPUT && exit 0
+                echo REPO_NAME=$(echo ${{ github.workspace }} | cut -d / -f 5) >> $GITHUB_OUTPUT
             - name: Get branch name
               id: get_branch_name
               run: |
-                echo BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}} >> $GITHUB_OUTPUT && exit 0
+                echo BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}} >> $GITHUB_OUTPUT
             - name: Zip Folder
               run: |
                 cd ..
-                zip -r -q module.zip ${{ steps.get_repo_name.outputs.REPO_NAME }} -x module.zip && exit 0
+                zip -r -q module.zip ${{ steps.get_repo_name.outputs.REPO_NAME }} -x module.zip
             - name: Get OAUTH token from oauth.prestashop.com
               uses: ./actions/auth-compliance
               id: get_oauth_token
@@ -30,23 +33,25 @@ jobs:
                 grant-type: ${{ secrets.OAUTH_GRANT_TYPE }}
                 audience: ${{ secrets.OAUTH_AUDIENCE }}
                 scope: ${{ secrets.OAUTH_SCOPE }}
+            - name: Get workflow ID to get reports
+              id: get_workflow_id
+              run: |
+                echo RUNID=$(gh api repos/PrestaShopSellerExtensions/${{ steps.get_repo_name.outputs.REPO_NAME }}/commits/${{ github.event.pull_request.head.sha }}/check-runs | jq -r '.check_runs[] | select(.name == "get reports") | .html_url | capture("/runs/(?<number>[0-9]+)/jobs") | .number' | sed 's/"//g' | head -n 1) >> $GITHUB_OUTPUT
             - name: "Send zip to orchestrator"
               id: send_zip
               run: |
-                echo  "OAuth Token [${{ steps.get_oauth_token.outputs.token }}]"
                 curl --location --request POST "${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/scan" \
                     --header "Connection: keep-alive" \
                     --header "Content-Type: multipart/form-data" \
                     --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
                     --form 'module=@./../module.zip' \
                     --form 'callback[method]="post"' \
-                    --form 'callback[uri]="https://api.github.com/repos/PrestaShopSellerExtensions/${{ steps.get_repo_name.outputs.REPO_NAME }}/actions/workflows/compliance-get-reports.yml/dispatches"' \
-                    --form 'callback[payload][ref]=${{ steps.get_branch_name.outputs.BRANCH }}' \
+                    --form 'callback[uri]="https://api.github.com/repos/PrestaShopSellerExtensions/${{ steps.get_repo_name.outputs.REPO_NAME }}/actions/runs/${{ steps.get_workflow_id.outputs.RUNID }}/rerun"' \
                     --form 'callback[headers][0][0]="Accept"' \
                     --form 'callback[headers][0][1]="application/vnd.github+json"' \
                     --form 'callback[headers][1][0]="X-GitHub-Api-Version"' \
                     --form 'callback[headers][1][1]="2022-11-28"' \
                     --form 'callback[headers][2][0]="Authorization"' \
                     --form 'callback[headers][2][1]="Bearer ${{ secrets.PAT }}"' \
-                    --output scan.json && exit 0
-                jq --color-output . scan.json | less -R && exit 0
+                    --output scan.json
+                jq --color-output . scan.json | less -R
