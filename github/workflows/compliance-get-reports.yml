@@ -125,7 +125,7 @@ jobs:
           scope: ${{ secrets.OAUTH_SCOPE }}
       - name: Module is compatible with Top 30 sellers ?
         run: |
-          curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/ps-module-compatibility/v1/top-sellers" \
+          curl --location --request POST "${{ secrets.COMPLIANCE_BASE_URI }}/ps-module-compatibility/v1/top-sellers" \
             --header "Connection: keep-alive" \
             --header "Content-Type: multipart/form-data" \
             --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
