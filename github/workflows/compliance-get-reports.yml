@@ -129,6 +129,6 @@ jobs:
             --header "Connection: keep-alive" \
             --header "Content-Type: multipart/form-data" \
             --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
-            --form 'module=@./../module.zip' \
+            --form 'module=@./../module.zip;type=application/zip' \
             --output top-sellers.json
           jq --color-output . top-sellers.json | less -R
