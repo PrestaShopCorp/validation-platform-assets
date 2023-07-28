@@ -101,3 +101,34 @@ jobs:
             --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
             --output report.json
           jq --color-output . report.json | less -R 
+  get-report-top-sellers:
+    name: report compatible with top sellers
+    runs-on: ubuntu-latest  
+    needs:
+      - get-report
+    steps:
+      - uses: actions/checkout@v3
+      - name: Zip Folder
+        run: |
+          cd ..
+          zip -r -q module.zip ${TECHNICAL_NAME} -x module.zip
+      - name: Get OAUTH token from oauth.prestashop.com
+        uses: ./actions/auth-compliance
+        id: get_oauth_token
+        with:
+          token-uri: ${{ secrets.OAUTH_TOKEN_URI }}
+          cookie: ${{ secrets.OAUTH_COOKIE }}
+          client-id: ${{ secrets.OAUTH_CLIENT_ID }}
+          client-secret: ${{ secrets.OAUTH_CLIENT_SECRET }}
+          grant-type: ${{ secrets.OAUTH_GRANT_TYPE }}
+          audience: ${{ secrets.OAUTH_AUDIENCE }}
+          scope: ${{ secrets.OAUTH_SCOPE }}
+      - name: Module is compatible with Top 30 sellers ?
+        run: |
+          curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/ps-module-compatibility/v1/top-sellers" \
+            --header "Connection: keep-alive" \
+            --header "Content-Type: multipart/form-data" \
+            --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
+            --form 'module=@./../module.zip' \
+            --output top-sellers.json
+          jq --color-output . top-sellers.json | less -R
