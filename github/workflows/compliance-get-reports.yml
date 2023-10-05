@@ -102,7 +102,7 @@ jobs:
             --output report.json
           jq --color-output . report.json | less -R 
       - name: Report Security in PDF
-        if: ${{ steps.init_service_name.outputs.SERVICE_NAME == 'ps-security-api' }}
+        if: ${{ matrix.services == 'ps-security-api' }}
         run: |
           echo "https://api.compliance.prestashop.com/ps-security/v1/report?version=${{ steps.get_version.outputs.match }}&technicalName=$TECHNICAL_NAMEtype=Pdf"
   get-report-top-sellers:
