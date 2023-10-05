@@ -104,7 +104,7 @@ jobs:
       - name: Report Security in PDF
         if: ${{ matrix.services == 'ps-security-api' }}
         run: |
-          echo "http://api.compliance.prestashop.com/ps-security/v1/report?version=${{ steps.get_version.outputs.match }}&technicalName=${{TECHNICAL_NAME}}&type=Pdf"
+          echo "http://api.compliance.prestashop.com/ps-security/v1/report?version=${{ steps.get_version.outputs.match }}&technicalName=$TECHNICAL_NAME&type=Pdf"
   get-report-top-sellers:
     name: report compatible with top sellers
     runs-on: ubuntu-latest  
