@@ -67,9 +67,6 @@ jobs:
     runs-on: ubuntu-latest  
     needs:
       - get-status
-    strategy:
-        matrix:
-            services: '${{ fromJSON(needs.get-status.outputs.services).services }}' 
     steps:
       - uses: actions/checkout@v3
       - uses: actions-ecosystem/action-regex-match@v2
@@ -88,51 +85,15 @@ jobs:
           grant-type: ${{ secrets.OAUTH_GRANT_TYPE }}
           audience: ${{ secrets.OAUTH_AUDIENCE }}
           scope: ${{ secrets.OAUTH_SCOPE }}
-      - name: init service name
-        id: init_service_name
+      - name: Final report in JSON
         if: ${{ steps.get_version.outputs.match != '' }}
         run: |
-          echo SERVICE_NAME=$(echo ${{ matrix.services }} | sed -e "s/-api$//") >> $GITHUB_OUTPUT
-      - name: get-report for ${{ matrix.services }}
-        if: ${{ steps.get_version.outputs.match != '' }}
-        run: |
-          curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/${{ steps.init_service_name.outputs.SERVICE_NAME }}/v1/report?technicalName=$TECHNICAL_NAME&version=${{ steps.get_version.outputs.match }}" \
+          curl --location --request GET "${{ secrets.COMPLIANCE_BASE_URI }}/orchestrator/v1/report?technicalName=$TECHNICAL_NAME&version=${{ steps.get_version.outputs.match }}" \
             --header 'Accept: application/json' \
             --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
             --output report.json
           jq --color-output . report.json | less -R 
-      - name: Report Security in PDF
-        if: ${{ matrix.services == 'ps-security-api' }}
+      - name: Final report in PDF
+        if: ${{ steps.get_version.outputs.match != '' }}
         run: |
-          echo "http://api.compliance.prestashop.com/ps-security/v1/report?version=${{ steps.get_version.outputs.match }}&technicalName=$TECHNICAL_NAME&type=Pdf"
-  get-report-top-sellers:
-    name: report compatible with top sellers
-    runs-on: ubuntu-latest  
-    needs:
-      - get-report
-    steps:
-      - uses: actions/checkout@v3
-      - name: Zip Folder
-        run: |
-          cd ..
-          zip -r -q module.zip ${TECHNICAL_NAME} -x module.zip
-      - name: Get OAUTH token from oauth.prestashop.com
-        uses: ./actions/auth-compliance
-        id: get_oauth_token
-        with:
-          token-uri: ${{ secrets.OAUTH_TOKEN_URI }}
-          cookie: ${{ secrets.OAUTH_COOKIE }}
-          client-id: ${{ secrets.OAUTH_CLIENT_ID }}
-          client-secret: ${{ secrets.OAUTH_CLIENT_SECRET }}
-          grant-type: ${{ secrets.OAUTH_GRANT_TYPE }}
-          audience: ${{ secrets.OAUTH_AUDIENCE }}
-          scope: ${{ secrets.OAUTH_SCOPE }}
-      - name: Module is compatible with Top 30 sellers ?
-        run: |
-          curl --location --request POST "${{ secrets.COMPLIANCE_BASE_URI }}/ps-module-compatibility/v1/top-sellers" \
-            --header "Connection: keep-alive" \
-            --header "Content-Type: multipart/form-data" \
-            --oauth2-bearer ${{ steps.get_oauth_token.outputs.token }} \
-            --form 'module=@./../module.zip;type=application/zip' \
-            --output top-sellers.json
-          jq --color-output . top-sellers.json | less -R
+          echo "http://api.compliance.prestashop.com/orchestrator/v1/report?technicalName=$TECHNICAL_NAME&version=${{ steps.get_version.outputs.match }}&type=Pdf"
